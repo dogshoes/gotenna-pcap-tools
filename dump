@@ -1,0 +1,46 @@
+#!/usr/bin/python
+from pcapfile import savefile
+import binascii
+import struct
+import sys
+
+capfile = savefile.load_savefile(sys.stdin, verbose=False)
+
+print capfile
+
+for packet in capfile.packets:
+	raw = packet.raw()
+
+	# Ensure this is a Attribute Protocol (0x0004) message.
+	l2capcid = struct.unpack('H', raw[25:27])[0]
+	if l2capcid != 0x0004:
+		continue
+
+	# This is a flag the nordic RF sniffer puts in the pcap packet.  Has information on the environment.
+	nordicflags = struct.unpack('B', raw[8])[0]
+
+	direction = None
+	# Third bit of the nordic flags set the direction, 0010 for master to slave, 0000 for slave to master.
+	if nordicflags & 0x02:
+		direction = "M2S"
+	else:
+		direction = "S2M"
+
+	btattpayload = raw[27:]
+
+	# First bit of the ATT payload is the opcode.
+	btattopcode = btattpayload[0]
+	opcode = struct.unpack('B', btattopcode)[0]
+
+	# At the moment we're only interested in "Write Request" (0x12) and "Handle Value Indication" (0x1d)
+	if not opcode in [0x12, 0x1d]:
+		continue
+
+	# Second bit, assuming we have an opcode that supports it, is the "handle".
+	btatthandle = btattpayload[1:3]
+	handle = struct.unpack('H', btatthandle)[0]
+	
+	# Finally we have data, minus three checksum bytes on the end.
+	btattdata = btattpayload[3:-3]
+
+	print "{0:05d} {1} {2}".format(packet.timestamp, direction, binascii.hexlify(btattdata))

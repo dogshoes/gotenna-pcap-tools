@@ -19,6 +19,10 @@ for packet in capfile.packets:
 	# This is a flag the nordic RF sniffer puts in the pcap packet.  Has information on the environment.
 	nordicflags = struct.unpack('B', raw[8])[0]
 
+	# Skip messages with invalid CRCs.
+	if not nordicflags & 0x01:
+		continue
+
 	direction = None
 	# Third bit of the nordic flags set the direction, 0010 for master to slave, 0000 for slave to master.
 	if nordicflags & 0x02:

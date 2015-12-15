@@ -8,8 +8,15 @@ capfile = savefile.load_savefile(sys.stdin, verbose=False)
 
 print capfile
 
+frameno = 0
+
+print "FRAME DIR OP HANDLE CONTENTS"
+print "------------------------------------------------------------"
+
 for packet in capfile.packets:
 	raw = packet.raw()
+
+	frameno = frameno + 1
 
 	# Ensure this is a Attribute Protocol (0x0004) message.
 	l2capcid = struct.unpack('H', raw[25:27])[0]
@@ -47,4 +54,4 @@ for packet in capfile.packets:
 	# Finally we have data, minus three checksum bytes on the end.
 	btattdata = btattpayload[3:-3]
 
-	print "{0:05d} {1} {2}".format(packet.timestamp, direction, binascii.hexlify(btattdata))
+	print "{0:05d} {1} {2:02x} {3:04x}   {4}".format(frameno, direction, opcode, handle, binascii.hexlify(btattdata))
